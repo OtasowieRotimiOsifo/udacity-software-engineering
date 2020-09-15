@@ -3,28 +3,18 @@ import sys
 import pandas as pd
 from sqlalchemy import create_engine
 
-from sklearn.pipeline import Pipeline
+
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.multioutput import MultiOutputClassifier
-from sklearn.pipeline import FeatureUnion
-
-from sklearn.preprocessing import StandardScaler
-
 
 import pickle
 
+# local packages 
 sys.path.append('../')
 from basic_utilities import basic_utils
+from basic_utilities import model_builder
 
-#nltk.download(['punkt', 'stopwords', 'wordnet', 'averaged_perceptron_tagger'])
-#stopwords = nltk.corpus.stopwords.words('english')
-#punctuations = list(string.punctuation)
-#url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 
-    
 def load_data(database_filepath: str) -> basic_utils.Entity:
     """
     retrieves masseages data from an sqlite database file 
@@ -62,50 +52,6 @@ def load_data(database_filepath: str) -> basic_utils.Entity:
     
     entity = basic_utils.Entity(X, Y, category_name_list,  df, original, genre)
     return entity
-
-
-
-
-    
-def build_model() -> Pipeline:
-    """
-    creates a piline for natural language processing based on tfidf
-
-    Returns
-    -------
-    Pipeline
-        pipline contining the steps for training a classifier for nlp.
-
-    """
-    clf = RandomForestClassifier(
-                                 n_estimators=200,
-                                 max_features='auto',
-                                 min_samples_leaf=1,
-                                 min_samples_split=3,
-                                 random_state=42, 
-                                 n_jobs=-1)
-    model = MultiOutputClassifier(clf)
-    
-    pipeline = Pipeline([
-        ('features', FeatureUnion(
-            [('text', Pipeline(
-                [('text_field_extractor', basic_utils.TextFieldExtractor('message')), 
-                 ('tfidf', TfidfVectorizer(tokenizer=basic_utils.tokenize, min_df=.0025, max_df=0.5, ngram_range=(1,2)))
-                 ])),
-             ('numerics', FeatureUnion(
-                                   [('text_len', Pipeline([('text_len_extractor', basic_utils.NumericFieldExtractor('text_len')), 
-                                                       ('text_len_scaler', StandardScaler())
-                                                       ])),
-                                    ('punt_perc', Pipeline([('punt_perc_extractor', basic_utils.NumericFieldExtractor('punt_perc')), 
-                                                       ('punt_perc_scaler', StandardScaler())
-                                                       ]))
-                                   ])),
-             ('starting_verb', basic_utils.PosFieldExtractor('starting_verb_flag'))
-            ])),
-        ('clf', model)
-    ])
-    
-    return pipeline
 
 
 def get_classification_reports(Y_test, Y_pred, category_names):
@@ -167,7 +113,7 @@ def main():
                                                             random_state=42)
         
         print('Building model...')
-        model = build_model()
+        model = model_builder.build_model()
         
         print('Training model...')
         model.fit(X_train, Y_train)
