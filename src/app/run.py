@@ -1,4 +1,5 @@
 import sys
+import os
 
 import json
 import plotly
@@ -14,8 +15,11 @@ from sqlalchemy import create_engine
 
 #from typing import List
 
-sys.path.append('../')
+cwd = os.getcwd()
+sys.path.append(cwd)
+
 from basic_utilities import basic_utils
+from basic_utilities import analysis_tools
 
 
 
@@ -34,12 +38,13 @@ app = Flask(__name__)
 #    return clean_tokens
 
 # load data
-engine = create_engine('sqlite:///../DisasterResponse.db') 
+data_base_file_path = cwd + '/DisasterResponse.db'
+engine = create_engine('sqlite:///' + data_base_file_path) 
 df = pd.read_sql_table('DisasterResponse', engine)
 
 # load model
-model_file_path = '/media/otasowie/Elements/latest-2020-sept-06/latest-latest/udacity-project-3-files/latest/disaster_response_pipeline_project/classifier.pkl'
-model = joblib.load(model_file_path)
+pickle_file_path = cwd + "/classifier.pkl"
+model = joblib.load(pickle_file_path)
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -49,32 +54,38 @@ def index():
     
     # extract data needed for visuals
     # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    #genre_counts = df.groupby('genre').count()['message']
+    #genre_names = list(genre_counts.index)
     
+    target_categories = df.iloc[:, range(4, 40)]
+    class_counts = analysis_tools.count_column_values(target_categories)
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
-    graphs = [
-        {
-            'data': [
-                Bar(
-                    x=genre_names,
-                    y=genre_counts
-                )
-            ],
+    #get_plotly_graph(df: pd.DataFrame, data_info='')
+    #graphs = [
+    #    {
+    #        'data': [
+    #            Bar(
+    #                #x=genre_names,
+    #                y=class_counts
+    #            )
+    #        ],
 
-            'layout': {
-                'title': 'Distribution of Message Genres',
-                'yaxis': {
-                    'title': "Count"
-                },
-                'xaxis': {
-                    'title': "Genre"
-                }
-            }
-        }
-    ]
+    #         'layout': {
+    #            'title': 'Distribution of Message Genres',
+    #            'yaxis': {
+    #                'title': "Count"
+    #            },
+    #            'xaxis': {
+    #                'title': "Genre"
+    #            }
+    #        }
+    #    }
+    #]
     
+    graphs = [
+        analysis_tools.get_plotly_graph(class_counts, 'All Data: ')
+    ]
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)

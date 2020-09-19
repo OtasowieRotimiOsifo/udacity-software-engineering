@@ -1,10 +1,15 @@
 import sys
+import os
+
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from sqlalchemy import create_engine
 
+cwd = os.getcwd()
+sys.path.append(cwd)
 
+# local packages 
+from basic_utilities import analysis_tools
 
 
 def read_csv_file(filepath: str) -> pd.DataFrame:
@@ -50,39 +55,52 @@ def load_data(messages_filepath: str, categories_filepath: str) -> pd.DataFrame:
         categories = read_csv_file(categories_filepath)
         
         df = pd.merge(messages, categories, on='id')
+        return df
     except Exception as er:
         print(er)
-    return df
+    return None
 
-def explore_target_categories(df: pd.DataFrame):
+def set_values_for_categories(categories: pd.DataFrame) -> pd.DataFrame:
     """
     
-    counts and plots the number of each target class in each 
-    column of categories
-    
+
     Parameters
     ----------
-    df : pd.DataFrame
-        data frame containing cleaned data
+    categories : pd.DataFrame
+        dataframe of categories names
 
     Returns
     -------
-    None.
+    categories_df : TYPE
+        modified dataframe with columns, values and categories initialized 
 
     """
-    target_categories = df.iloc[:, range(4, 40)]
-    groups_dict = dict()
-    for column in target_categories.columns:
-        groups_dict[column] = target_categories[column].value_counts()
+    cols = categories.iloc[0].values
     
-    class_counts_df = pd.DataFrame(groups_dict)
+    category_colnames = list(map(lambda x: x[0:len(x)-2], cols))
+    categories.columns = category_colnames
+
+    values = list(map(lambda x: x[len(x)-1: len(x)], cols))
     
-    fig, ax = plt.subplots()
-    fig.suptitle("Target Class Counts in Categories", fontsize=12)
-    class_counts_df.plot(kind="bar", legend=False, ax=ax)#.grid(axis='x')
-    ax.set_ylabel('Frequency')
-    ax.set_xlabel('Target Category Classes')
-    plt.show()
+    df_dict = dict()
+    for name, value in zip(category_colnames, values):
+        col_values = list()
+        col_values.append(int(value))
+        df_dict[name] = col_values
+
+    for cnt in range(1, len(categories)):
+        cols = categories.iloc[cnt].values
+        values = list(map(lambda x: x[len(x)-1: len(x)], cols))
+        for name, value in zip(category_colnames, values):
+            col_values = df_dict[name]
+            col_values.append(int(value))
+            df_dict.pop(name)
+            df_dict[name] = col_values
+    
+    categories_df = pd.DataFrame(df_dict)
+    #categories_df.drop(categories_df.loc[categories_df['related']==2].index, inplace=True)
+    
+    return categories_df
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -103,11 +121,10 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     category_colnames = list(map(lambda x: x[0:len(x)-2], rows.values))
     categories.columns = category_colnames
     
-    for column in categories:
-        # set each value to be the last character of the string
-        categories[column] = list(map(lambda x: x[len(x)-1], categories[column].values))
-        # convert column from string to numeric
-        categories[column] = categories.astype({column:int})
+    categories = set_values_for_categories(categories)
+    
+    df.reset_index(drop=True, inplace=True)
+    categories.reset_index(drop=True, inplace=True)
     
     df.drop(columns=['categories'], inplace=True)
     
@@ -115,13 +132,13 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     
     df.drop_duplicates(keep=False, inplace=True)
     
-    df.dropna(inplace=True)
+    #df.dropna(inplace=True)
     
     df.reset_index(drop=True, inplace=True)
     
     return df
     
-def save_data(df: pd.DataFrame, database_filename: str):
+def save_data(df: pd.DataFrame, database_filename: str) -> None:
     """
     
 
@@ -154,7 +171,7 @@ def main():
 
         print('Cleaning data...')
         df = clean_data(df)
-        explore_target_categories(df)
+        analysis_tools.explore_target_categories_with_plotly(df, 'All Data: ')
         
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
         save_data(df, database_filepath)

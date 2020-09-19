@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from basic_utilities import basic_utils
 
 class ModelBuilder:
-    def build_model() -> Pipeline:
+    def build_model(self) -> Pipeline:
         """
         creates a piline for natural language processing based on tfidf
         

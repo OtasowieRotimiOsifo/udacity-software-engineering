@@ -1,18 +1,24 @@
 import sys
+import os
 
 import pandas as pd
 from sqlalchemy import create_engine
 
 
-from sklearn.metrics import classification_report
+
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 
 import pickle
 
 # local packages 
-sys.path.append('../')
+cwd = os.getcwd()
+sys.path.append(cwd)
+
+
 from basic_utilities import basic_utils
 from basic_utilities import model_builder
+from basic_utilities import analysis_tools
 
 
 def load_data(database_filepath: str) -> basic_utils.Entity:
@@ -54,39 +60,51 @@ def load_data(database_filepath: str) -> basic_utils.Entity:
     return entity
 
 
-def get_classification_reports(Y_test, Y_pred, category_names):
-    report_dict = dict()
-    reports_dict = dict()
-    for category_name in category_names:
-        y_test = Y_test[category_name].values
         
-        y_pred = Y_pred[category_name].values
-        
-        report = classification_report(y_test, y_pred)
-        report_dict['report'] = report
-        
-        reports_dict[category_name] = report_dict
-    return reports_dict
+def evaluate_model(model: Pipeline, X_test: pd.DataFrame, 
+                   Y_test: pd.DataFrame) -> None:
+    """
+    
 
-def display_prediction_report(reports_dict):
-    for key in reports_dict.keys():
-        report_dict = reports_dict[key]
-        print('Scores for ', key, ': ')
-        print('---------------------')
-        print(report_dict['report'])
-        
-def evaluate_model(model, X_test, Y_test, category_names):
+    Parameters
+    ----------
+    model : Pipeline
+        trained machine learning pipeline to be evaluated against unseen data.
+    X_test : pd.DataFrame
+        test data to be used for evaluation
+    Y_test : pd.DataFrame
+        data frame with expected values to be used as reference.
+
+    Returns
+    -------
+    no return
+
+    """
     
     Y_pred = model.predict(X_test)
     
     Y_test = Y_test.iloc[:,].reset_index(drop=True)
     Y_pred = pd.DataFrame(data=Y_pred, columns=Y_test.columns)
     
-    reports_dict = get_classification_reports(Y_test, Y_pred, category_names)
-    display_prediction_report(reports_dict)
+    analysis_tools.display_results(Y_test, Y_pred)
     
     
-def save_model(model, model_filepath):
+def save_model(model: Pipeline, model_filepath: str) -> None:
+    """
+    
+
+    Parameters
+    ----------
+    model : Pipeline
+        trained pipeline model.
+    model_filepath : str
+        file path for saving the trained model
+
+    Returns
+    -------
+    No return 
+
+    """
     try:
         pickle.dump(model, open(model_filepath, 'wb'))
     except Exception as er:
@@ -97,29 +115,33 @@ def save_model(model, model_filepath):
 def main():
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
+        
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         entity = load_data(database_filepath)
         X = entity.feature_vector
         Y = entity.target_matrix
-        category_names = entity.category_names
-        
+    
         X = basic_utils.do_pos_tagging(X)
         
         X_train, X_test, Y_train, Y_test = train_test_split(
                                                             X, 
                                                             Y, 
-                                                            stratify=Y,
-                                                            test_size=0.2,
+                                                            test_size=0.3,
                                                             random_state=42)
         
+        analysis_tools.explore_data_with_plotly(Y, 'All Data: ')
+        analysis_tools.explore_data_with_plotly(Y_train, 'Training Data: ')
+        analysis_tools.explore_data_with_plotly(Y_test, 'Test Validation Data: ')
+        
         print('Building model...')
-        model = model_builder.build_model()
+        modelBuilder = model_builder.ModelBuilder()
+        model = modelBuilder.build_model()
         
         print('Training model...')
         model.fit(X_train, Y_train)
         
         print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
+        evaluate_model(model, X_test, Y_test)
 
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
         save_model(model, model_filepath)
