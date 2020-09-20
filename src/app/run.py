@@ -9,6 +9,8 @@ import pandas as pd
 from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
+#from plotly.graph_objects import Bar
+#import plotly.graph_objects as g_o
 #from sklearn.externals import joblib
 import joblib
 from sqlalchemy import create_engine
@@ -40,7 +42,7 @@ app = Flask(__name__)
 # load data
 data_base_file_path = cwd + '/DisasterResponse.db'
 engine = create_engine('sqlite:///' + data_base_file_path) 
-df = pd.read_sql_table('DisasterResponse', engine)
+df_db = pd.read_sql_table('DisasterResponse', engine)
 
 # load model
 pickle_file_path = cwd + "/classifier.pkl"
@@ -57,8 +59,10 @@ def index():
     #genre_counts = df.groupby('genre').count()['message']
     #genre_names = list(genre_counts.index)
     
-    target_categories = df.iloc[:, range(4, 40)]
+    target_categories = df_db.iloc[:, range(4, 40)]
     class_counts = analysis_tools.count_column_values(target_categories)
+    class_counts.dropna(inplace=True)
+    #print(class_counts.head())
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     #get_plotly_graph(df: pd.DataFrame, data_info='')
@@ -83,15 +87,36 @@ def index():
     #    }
     #]
     
+    #fig = analysis_tools.get_plotly_data(class_counts, 'All Data: ')
+    #fig = g_o.Figure()
+    print(class_counts.iloc[0][0:36].values)
+    data = [Bar(x=class_counts.columns, y=class_counts.iloc[0][0:36].values)]
+    
+    layout = {
+        'title':'All Data: Counts of target classes per category',
+        'yaxis': {
+            'title': 'Frequency'
+            },
+        'xaxis': {
+            'title': 'Categories'
+            }
+    }
+    
+    
     graphs = [
-        analysis_tools.get_plotly_graph(class_counts, 'All Data: ')
+        {
+         'data': data,
+         'layout': layout
+        }
     ]
+   
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
+    
 
 def initialize_input_query(query: str)  -> pd.DataFrame:
     query_dict = {'message':query}
@@ -117,8 +142,7 @@ def go():
     df = initialize_input_query(query)
     # use model to predict classification for query
     classification_labels = model.predict(df)[0]
-    classification_results = dict(zip(df.columns[4:], classification_labels))
-
+    classification_results = dict(zip(df_db.columns[4:], classification_labels))
     # This will render the go.html Please see that file. 
     return render_template(
         'go.html',

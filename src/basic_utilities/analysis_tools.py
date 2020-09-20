@@ -18,6 +18,38 @@ from sklearn.metrics import confusion_matrix
 from typing import Dict
 from typing import List
 
+
+def get_plotly_data(df: pd.DataFrame, data_info='') -> List:
+    """
+    returns a plotly bar char object of the values in a data frame
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data frame conting data for plotting
+    data_info: str 
+        extra information about the data being displayed
+
+    Returns
+    -------
+    plotly figure object
+    """
+    
+    data = list()
+    for column in df.columns:
+        data.append(go.Bar(name=column, x=df[column].index, y=df[column].values))
+    
+    layout = go.Layout(
+        title=data_info + 'Counts of target classes per category',
+        legend_title='Categories',
+        xaxis_title='Target Classes',
+        yaxis_title='Counts'
+    )
+    
+    fig = go.Figure(data, layout)
+    
+    return fig
+
 def get_plotly_graph(df: pd.DataFrame, data_info='') -> go.Figure:
     """
     returns a plotly bar char object of the values in a data frame
