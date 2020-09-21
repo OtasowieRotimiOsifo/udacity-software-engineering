@@ -10,7 +10,7 @@ from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
 #from plotly.graph_objects import Bar
-#import plotly.graph_objects as g_o
+import plotly.graph_objects as g_o
 #from sklearn.externals import joblib
 import joblib
 from sqlalchemy import create_engine
@@ -61,7 +61,7 @@ def index():
     
     target_categories = df_db.iloc[:, range(4, 40)]
     class_counts = analysis_tools.count_column_values(target_categories)
-    class_counts.dropna(inplace=True)
+    #class_counts.dropna(inplace=True)
     #print(class_counts.head())
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -90,32 +90,47 @@ def index():
     #fig = analysis_tools.get_plotly_data(class_counts, 'All Data: ')
     #fig = g_o.Figure()
     print(class_counts.iloc[0][0:36].values)
-    data = [Bar(x=class_counts.columns, y=class_counts.iloc[0][0:36].values)]
+    #data = [Bar(x=class_counts.columns, y=class_counts.iloc[0][0:36].values)]
     
-    layout = {
-        'title':'All Data: Counts of target classes per category',
-        'yaxis': {
-            'title': 'Frequency'
-            },
-        'xaxis': {
-            'title': 'Categories'
-            }
-    }
+    # layout = {
+    #     'title':'All Data: Counts of target classes per category',
+    #     'yaxis': {
+    #         'title': 'Frequency'
+    #         },
+    #     'xaxis': {
+    #         'title': 'Categories'
+    #         }
+    # }
     
     
-    graphs = [
-        {
-         'data': data,
-         'layout': layout
-        }
-    ]
-   
-    # encode plotly graphs in JSON
+    # graphs = [
+    #     {
+    #      'data': [
+    #          Bar(
+    #              x=class_counts.columns, 
+    #              y=class_counts.iloc[0][0:36].values
+    #         )
+    #     ],
+         
+    #         'layout': {
+    #         'title':'All Data: Counts of target classes per category',
+    #         'yaxis': {
+    #             'title': 'Frequency'
+    #             },
+    #         'xaxis': {
+    #             'title': 'Categories'
+    #             }
+    #     }
+    #   }
+    # ]
+    
+    graphs = [analysis_tools.get_plotly_data(class_counts, 'All Data: ')]
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
+   
     
 
 def initialize_input_query(query: str)  -> pd.DataFrame:
