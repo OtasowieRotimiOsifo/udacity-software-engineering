@@ -7,15 +7,11 @@ import pandas as pd
 
 
 from flask import Flask
-from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
-#from plotly.graph_objects import Bar
-import plotly.graph_objects as g_o
-#from sklearn.externals import joblib
+from flask import render_template, request
 import joblib
 from sqlalchemy import create_engine
 
-#from typing import List
+from sklearn.model_selection import train_test_split
 
 cwd = os.getcwd()
 sys.path.append(cwd)
@@ -28,21 +24,18 @@ from basic_utilities import analysis_tools
 app = Flask(__name__)
 
 
-#def tokenize(text):
-#    tokens = word_tokenize(text)
-#    lemmatizer = WordNetLemmatizer()
-
-#    clean_tokens = []
-#    for tok in tokens:
-#        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-#        clean_tokens.append(clean_tok)
-
-#    return clean_tokens
-
 # load data
-data_base_file_path = cwd + '/DisasterResponse.db'
-engine = create_engine('sqlite:///' + data_base_file_path) 
-df_db = pd.read_sql_table('DisasterResponse', engine)
+database_filepath = cwd + '/DisasterResponse.db'
+
+entity = basic_utils.load_data(database_filepath)
+X = entity.feature_vector
+Y = entity.target_matrix
+
+X_train, X_test, Y_train, Y_test = train_test_split(
+                                                    X, 
+                                                    Y, 
+                                                    test_size=0.3,
+                                                    random_state=42)
 
 # load model
 pickle_file_path = cwd + "/classifier.pkl"
@@ -54,77 +47,15 @@ model = joblib.load(pickle_file_path)
 @app.route('/index')
 def index():
     
-    # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    #genre_counts = df.groupby('genre').count()['message']
-    #genre_names = list(genre_counts.index)
+    class_counts_all = analysis_tools.count_column_values(Y)
+    class_counts_train = analysis_tools.count_column_values(Y_train)
+    class_counts_test = analysis_tools.count_column_values(Y_test)
     
-    target_categories = df_db.iloc[:, range(4, 40)]
-    class_counts = analysis_tools.count_column_values(target_categories)
-    #class_counts.dropna(inplace=True)
-    #print(class_counts.head())
-    # create visuals
-    # TODO: Below is an example - modify to create your own visuals
-    #get_plotly_graph(df: pd.DataFrame, data_info='')
-    #graphs = [
-    #    {
-    #        'data': [
-    #            Bar(
-    #                #x=genre_names,
-    #                y=class_counts
-    #            )
-    #        ],
-
-    #         'layout': {
-    #            'title': 'Distribution of Message Genres',
-    #            'yaxis': {
-    #                'title': "Count"
-    #            },
-    #            'xaxis': {
-    #                'title': "Genre"
-    #            }
-    #        }
-    #    }
-    #]
-    
-    #fig = analysis_tools.get_plotly_data(class_counts, 'All Data: ')
-    #fig = g_o.Figure()
-    print(class_counts.iloc[0][0:36].values)
-    #data = [Bar(x=class_counts.columns, y=class_counts.iloc[0][0:36].values)]
-    
-    # layout = {
-    #     'title':'All Data: Counts of target classes per category',
-    #     'yaxis': {
-    #         'title': 'Frequency'
-    #         },
-    #     'xaxis': {
-    #         'title': 'Categories'
-    #         }
-    # }
-    
-    
-    # graphs = [
-    #     {
-    #      'data': [
-    #          Bar(
-    #              x=class_counts.columns, 
-    #              y=class_counts.iloc[0][0:36].values
-    #         )
-    #     ],
-         
-    #         'layout': {
-    #         'title':'All Data: Counts of target classes per category',
-    #         'yaxis': {
-    #             'title': 'Frequency'
-    #             },
-    #         'xaxis': {
-    #             'title': 'Categories'
-    #             }
-    #     }
-    #   }
-    # ]
-    
-    graphs = [analysis_tools.get_plotly_data(class_counts, 'All Data: ')]
+    graphs = [
+        analysis_tools.get_plotly_data(class_counts_all, 'All Data: '),
+        analysis_tools.get_plotly_data(class_counts_train, 'Training Data: '),
+        analysis_tools.get_plotly_data(class_counts_test, 'Validation Data: ')
+        ]
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
@@ -154,10 +85,13 @@ def go():
     # save user input in query
     query = request.args.get('query', '') 
     
-    df = initialize_input_query(query)
+    inputPreprocessor = basic_utils.InputPreprocessor()
+    df = inputPreprocessor.pre_process_input(query)
+    
     # use model to predict classification for query
     classification_labels = model.predict(df)[0]
     classification_results = dict(zip(df_db.columns[4:], classification_labels))
+    
     # This will render the go.html Please see that file. 
     return render_template(
         'go.html',

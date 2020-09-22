@@ -16,6 +16,8 @@ import pandas as pd
 import string
 from sklearn.base import BaseEstimator, TransformerMixin
 
+from sqlalchemy import create_engine
+
 from typing import List
 
 nltk.download(['punkt', 'stopwords', 'wordnet', 'averaged_perceptron_tagger'])
@@ -234,3 +236,55 @@ class PosFieldExtractor(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         return X[[self.field]]
+
+class InputPreprocessor:
+    def pre_process_input(self, query: str)  -> pd.DataFrame:
+        query_dict = {'message':query}
+        df = pd.DataFrame([query_dict])
+        
+        df = remove_empty(df)
+        
+        df['punt_perc'] = df['message'].apply(lambda x: count_punct(x))
+        df['text_len'] = df['message'].apply(lambda x: len(x) - x.count(" "))
+        
+        df = do_pos_tagging(df)
+        
+        return df
+
+def load_data(database_filepath: str) -> Entity:
+    """
+    retrieves masseages data from an sqlite database file 
+
+    Parameters
+    ----------
+    database_filepath : str
+        path to sqlite database file.
+
+    Returns
+    -------
+    Entity
+        abstract representation of data retrieved from a database.
+
+    """
+    engine = create_engine('sqlite:///' + database_filepath)
+    df = pd.read_sql_table(con=engine, table_name='DisasterResponse')
+    
+    df = remove_empty(df)
+    
+    df['punt_perc'] = df['message'].apply(lambda x: count_punct(x))
+    df['text_len'] = df['message'].apply(lambda x: len(x) - x.count(" "))
+    
+    category_name_list = df.columns[4:40]
+    
+    x = [df.message, df.text_len, df.punt_perc]
+    headers = ['message', 'text_len', 'punt_perc']
+    X = pd.concat(x, axis=1, keys=headers)
+    
+    Y = df.iloc[:, range(4, 40)]
+    
+    genre = df.genre
+    
+    original = df.original
+    
+    entity = Entity(X, Y, category_name_list,  df, original, genre)
+    return entity

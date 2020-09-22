@@ -2,9 +2,6 @@ import sys
 import os
 
 import pandas as pd
-from sqlalchemy import create_engine
-
-
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -19,46 +16,6 @@ sys.path.append(cwd)
 from basic_utilities import basic_utils
 from basic_utilities import model_builder
 from basic_utilities import analysis_tools
-
-
-def load_data(database_filepath: str) -> basic_utils.Entity:
-    """
-    retrieves masseages data from an sqlite database file 
-
-    Parameters
-    ----------
-    database_filepath : str
-        path to sqlite database file.
-
-    Returns
-    -------
-    Entity
-        abstract representation of data retrieved from a database.
-
-    """
-    engine = create_engine('sqlite:///' + database_filepath)
-    df = pd.read_sql_table(con=engine, table_name='DisasterResponse')
-    
-    df = basic_utils.remove_empty(df)
-    
-    df['punt_perc'] = df['message'].apply(lambda x: basic_utils.count_punct(x))
-    df['text_len'] = df['message'].apply(lambda x: len(x) - x.count(" "))
-    
-    category_name_list = df.columns[4:40]
-    
-    x = [df.message, df.text_len, df.punt_perc]
-    headers = ['message', 'text_len', 'punt_perc']
-    X = pd.concat(x, axis=1, keys=headers)
-    
-    Y = df.iloc[:, range(4, 40)]
-    
-    genre = df.genre
-    
-    original = df.original
-    
-    entity = basic_utils.Entity(X, Y, category_name_list,  df, original, genre)
-    return entity
-
 
         
 def evaluate_model(model: Pipeline, X_test: pd.DataFrame, 
@@ -86,8 +43,8 @@ def evaluate_model(model: Pipeline, X_test: pd.DataFrame,
     Y_test = Y_test.iloc[:,].reset_index(drop=True)
     Y_pred = pd.DataFrame(data=Y_pred, columns=Y_test.columns)
     
-    analysis_tools.display_results(Y_test, Y_pred)
-    
+    #analysis_tools.display_results(Y_test, Y_pred)
+    analysis_tools.display_classification_reports(Y_test, Y_pred)
     
 def save_model(model: Pipeline, model_filepath: str) -> None:
     """
@@ -117,7 +74,7 @@ def main():
         database_filepath, model_filepath = sys.argv[1:]
         
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-        entity = load_data(database_filepath)
+        entity = basic_utils.load_data(database_filepath)
         X = entity.feature_vector
         Y = entity.target_matrix
     
@@ -135,7 +92,8 @@ def main():
         
         print('Building model...')
         modelBuilder = model_builder.ModelBuilder()
-        model = modelBuilder.build_model()
+        #model = modelBuilder.build_model()
+        model =  modelBuilder.build_model_from_grid_searchCV(X_train, Y_train)
         
         print('Training model...')
         model.fit(X_train, Y_train)

@@ -370,6 +370,34 @@ def get_classification_reports(Y_test: pd.DataFrame, Y_pred: pd.DataFrame, \
         reports_dict[category_name] = report_dict
     return reports_dict
 
+def display_classification_reports(Y_test: pd.DataFrame, 
+                                   Y_pred: pd.DataFrame) -> None:
+    """
+
+    Parameters
+    ----------
+    Y_test : pd.DataFrame
+        expected classification matrix
+    Y_pred: pd.DataFrame
+        predicted classification matrix     
+    category_names: list of category names
+    Returns
+    -------
+    
+      
+    """
+    category_names = Y_test.columns
+    
+    reports_dict = get_classification_reports(Y_test, Y_pred, category_names)
+    
+    for key in reports_dict.keys():
+        report_dict = reports_dict[key]
+        
+        print('Scores for ', key, ': ')
+        print('---------------------')
+        print(report_dict['report'])
+        
+
 def display_prediction_report(reports_dict: Dict) -> None:
     """
     
