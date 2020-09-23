@@ -1,1 +1,29 @@
-# udacity-software-engineering
+# Project Summary
+This project is a web app where an emergency worker can input a new message and get classification results in several categories. The app includes visualization for the dataset that was used in the training and validation of the model.
+
+There three main parts to the project: ETL, ML-Pipline and the web app.
+## ETL
+This part is responsible for data extratact, clean/transform and sotre the data in an sqlite database file. The python file for ETL is in the data directory. This directory also includes example datasets of training. 
+
+## ML-Pipeline
+This part is responsible for trainin the model that is used to classify the messages. The python module bulds a machine learning pipeline that uses natural language processing. The pipeline includes text tokenization and vectoriztion, pos tagging with starting verb and a multioutput classifier. Grid search CV is used to obtain the best paramers for for the model that does the classification. The trained model is stored in a pickle file for deployment. The python module is in the models directory; it uses the data that was stored in the database in the ETL phase. 
+
+## Deployed App
+The web app uses the model that was trained in the ML-Pipeline to perform message classification. It is also displays visualiztions for the training and validation dataset to the user. The model is loaded from a pickle file.
+
+# How to run the different different modules
+The following steps can be used to execute each of the modules from the command line while at the src directory.
+## ETL
+python ./data/process\_data.py ./data/disaster\_messages.csv ./data/disaster\_categories.csv ./DisasterResponse.db
+
+## ML-Pipeline
+python ./models/train\_classifier.py ./DisasterResponse.db ./classifier.pkl
+
+## App
+To run the app, do the followings:
+python ./app/run.py ./DisasterResponse.db ./classifier.pkl
+
+# Extra
+It could be neccessary to install some dependent python packages before executing the module. Check the imports in the files for details. An example for such a package is pltly.
+
+I would recommend python 3.7 and above but is it not compulsory.

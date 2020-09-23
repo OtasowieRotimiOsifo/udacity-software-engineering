@@ -3,13 +3,11 @@ import os
 
 import json
 import plotly
-import pandas as pd
-
 
 from flask import Flask
 from flask import render_template, request
 import joblib
-from sqlalchemy import create_engine
+#from sqlalchemy import create_engine
 
 from sklearn.model_selection import train_test_split
 
@@ -62,23 +60,6 @@ def index():
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
    
-    
-
-def initialize_input_query(query: str)  -> pd.DataFrame:
-    query_dict = {'message':query}
-    df = pd.DataFrame([query_dict])
-    
-    df = basic_utils.remove_empty(df)
-    
-    df['punt_perc'] = df['message'].apply(lambda x: basic_utils.count_punct(x))
-    df['text_len'] = df['message'].apply(lambda x: len(x) - x.count(" "))
-    
-    df = basic_utils.do_pos_tagging(df)
-    
-    return df
-    
-    
-
 # web page that handles user query and displays model results
 @app.route('/go')
 def go():
@@ -90,7 +71,7 @@ def go():
     
     # use model to predict classification for query
     classification_labels = model.predict(df)[0]
-    classification_results = dict(zip(df_db.columns[4:], classification_labels))
+    classification_results = dict(zip(Y.columns, classification_labels))
     
     # This will render the go.html Please see that file. 
     return render_template(
