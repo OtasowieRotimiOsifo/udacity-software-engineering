@@ -123,16 +123,17 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     
     categories = set_values_for_categories(categories)
     
-    df.reset_index(drop=True, inplace=True)
-    categories.reset_index(drop=True, inplace=True)
-    
     df.drop(columns=['categories'], inplace=True)
     
+    df.reset_index(drop=True, inplace=True)
+    categories.reset_index(drop=True, inplace=True)
     df = pd.concat([df, categories], axis=1)
     
     df.drop_duplicates(keep=False, inplace=True)
     
-    #df.dropna(inplace=True)
+    df.dropna(inplace=True)
+    index_list = df[ df['related'] == 2].index 
+    df.drop(index_list, inplace = True)
     
     df.reset_index(drop=True, inplace=True)
     
@@ -156,7 +157,7 @@ def save_data(df: pd.DataFrame, database_filename: str) -> None:
     """
     sql_arg = 'sqlite:///' + database_filename
     engine = create_engine(sql_arg) 
-    df.to_sql('DisasterResponse', engine, index=False) 
+    df.to_sql('DisasterResponse', engine,  if_exists='replace', index=False) 
 
 
 def main():
